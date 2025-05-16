@@ -1,0 +1,11 @@
+venv/
+venv310/
+__pycache__/
+*.pyc
+*.pyd
+*.h5
+*.dll
+*.zip
+*.jpg
+*.png
+dataset/

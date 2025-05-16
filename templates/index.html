@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Analyzer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen">
+    <div class="bg-white p-8 rounded-lg shadow-lg w-96 text-center">
+        <h2 class="text-xl font-bold text-gray-700">โปรดอัปโหลดภาพเพื่อตรวจสอบความเข้มข้นของสารละลาย</h2>
+        
+        <input type="file" id="fileInput" class="mt-4 w-full border p-2 rounded-lg">
+        <button onclick="uploadImage()" class="mt-4 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
+            วิเคราะห์
+        </button>
+
+        <div id="result" class="mt-4 text-lg font-semibold"></div>
+        
+        <div class="w-full bg-gray-300 rounded-full h-5 mt-3 hidden" id="progressBarContainer">
+            <div class="bg-green-500 h-5 rounded-full transition-all duration-500" id="progressBar" style="width: 0%;"></div>
+        </div>
+
+        <img id="preview" class="mt-4 rounded-lg shadow-md hidden max-w-full"/>
+
+        <div id="converted" class="mt-4 text-sm text-gray-600"></div>
+    </div>
+    <script>
+        function uploadImage() {
+            let fileInput = document.getElementById("fileInput").files[0];
+            if (!fileInput) {
+                alert("กรุณาเลือกไฟล์ก่อน!");
+                return;
+            }
+
+            let formData = new FormData();
+            formData.append("file", fileInput);
+
+            fetch("/upload", { method: "POST", body: formData })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById("result").innerHTML = "<b class='text-red-500'>" + data.error + "</b>";
+                } else {
+                    let intensity = data.intensity.toFixed(2);
+                    let convertedValue = (intensity / 255 * 100).toFixed(2) + " mg/L";  // แปลงเป็น mg/L
+
+                    document.getElementById("result").innerHTML = "ค่าความเข้มข้น: <b>" + intensity + "</b>";
+                    document.getElementById("converted").innerHTML = "เทียบเท่ากับ: <b>" + convertedValue + "</b>";
+
+                    let img = document.getElementById("preview");
+                    img.src = URL.createObjectURL(fileInput);
+                    img.classList.remove("hidden");
+
+                    // แสดง Progress Bar
+                    let progressBarContainer = document.getElementById("progressBarContainer");
+                    let progressBar = document.getElementById("progressBar");
+                    progressBarContainer.classList.remove("hidden");
+                    progressBar.style.width = (intensity / 255 * 100) + "%";
+                }
+            })
+            .catch(error => console.error("Error:", error));
+        }
+    </script>
+</body>
+</html>
