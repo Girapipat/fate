@@ -37,6 +37,8 @@ def index():
 @app.route("/upload", methods=["POST"])
 def upload():
     try:
+        print("📥 ได้รับคำร้องขอใหม่แล้ว")
+
         file = request.files["file"]
         if not file:
             return jsonify({"error": "ไม่พบไฟล์"}), 400
@@ -57,7 +59,6 @@ def upload():
         if predicted_class == "not_solution":
             return jsonify({"result": "ไม่ใช่สารละลาย"})
 
-        # ประมาณค่าความเข้มข้นจาก softmax confidence
         confidence = predictions[predicted_index]
         intensity = confidence * 255
 
