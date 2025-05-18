@@ -1,74 +1,61 @@
-from flask import Flask, request, render_template, jsonify
+from flask import Flask, request, jsonify, render_template
+from PIL import Image
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.preprocessing.image import img_to_array
-from PIL import Image
-import io
+import os
 
 app = Flask(__name__)
 
-# โหลดโมเดล
-model = tf.keras.models.load_model("solution_model.h5")
+# โหลดโมเดล TFLite
+interpreter = tf.lite.Interpreter(model_path="solution_model.tflite")
+interpreter.allocate_tensors()
 
-# รายชื่อคลาส
-class_names = [
-    "not_solution",
-    "solution_soap(high)",
-    "solution_soap(low)",
-    "solution_soap(mid)",
-    "solution_syrup_black(high)",
-    "solution_syrup_black(low)",
-    "solution_syrup_black(mid)",
-    "solution_syrup_orange(high)",
-    "solution_syrup_orange(low)",
-    "solution_syrup_orange(mid)",
-    "solution_syrup_red(high)",
-    "solution_syrup_red(low)",
-    "solution_syrup_red(mid)",
-    "solution_vinegar(high)",
-    "solution_vinegar(low)",
-    "solution_vinegar(mid)",
-]
+# เตรียม input/output ของโมเดล
+input_details = interpreter.get_input_details()
+output_details = interpreter.get_output_details()
 
-@app.route("/")
+UPLOAD_FOLDER = 'uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+@app.route('/')
 def index():
-    return render_template("index.html")
+    return render_template('index.html')
 
-@app.route("/upload", methods=["POST"])
+@app.route('/upload', methods=['POST'])
 def upload():
+    if 'file' not in request.files:
+        return jsonify({'error': 'ไม่พบไฟล์ในคำขอ'}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'ไม่ได้เลือกไฟล์'}), 400
+
+    filepath = os.path.join(UPLOAD_FOLDER, file.filename)
+    file.save(filepath)
+
+    # ประมวลผลภาพ
     try:
-        print("📥 ได้รับคำร้องขอใหม่แล้ว")
+        img = Image.open(filepath).convert('RGB')
+        img = img.resize((224, 224))  # ต้องตรงกับ input ของโมเดล
+        img_array = np.array(img, dtype=np.float32) / 255.0
+        img_array = np.expand_dims(img_array, axis=0)
 
-        file = request.files["file"]
-        if not file:
-            return jsonify({"error": "ไม่พบไฟล์"}), 400
+        # รันโมเดล
+        interpreter.set_tensor(input_details[0]['index'], img_array)
+        interpreter.invoke()
+        output_data = interpreter.get_tensor(output_details[0]['index'])
 
-        # แปลงไฟล์เป็นภาพ
-        image_bytes = file.read()
-        image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-        image = image.resize((224, 224))
-        image = img_to_array(image)
-        image = np.expand_dims(image, axis=0)
-        image = image / 255.0
+        # สมมุติ output เป็นค่าความเข้มข้น (หรือ [0] = confidence ว่าเป็นสารละลาย)
+        intensity = float(output_data[0][0])
 
-        # ทำนาย
-        predictions = model.predict(image)[0]
-        predicted_index = np.argmax(predictions)
-        predicted_class = class_names[predicted_index]
+        # ถ้าโมเดลบอกว่าไม่ใช่สารละลาย ให้แสดงข้อความพิเศษ (เช่นใช้ threshold สมมุติ)
+        if intensity < 0:
+            return jsonify({'error': 'ไม่ใช่สารละลาย'})
 
-        if predicted_class == "not_solution":
-            return jsonify({"result": "ไม่ใช่สารละลาย"})
-
-        confidence = predictions[predicted_index]
-        intensity = confidence * 255
-
-        return jsonify({
-            "result": "สารละลาย",
-            "intensity": float(intensity)
-        })
+        return jsonify({'intensity': intensity})
 
     except Exception as e:
-        return jsonify({"error": f"เกิดข้อผิดพลาด: {str(e)}"}), 500
+        return jsonify({'error': f'เกิดข้อผิดพลาด: {str(e)}'})
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     app.run(debug=True)
