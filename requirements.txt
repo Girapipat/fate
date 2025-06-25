@@ -1,5 +1,6 @@
+# requirements.txt
 flask
 numpy
 pillow
-tensorflow-cpu==2.13.0
+tensorflow==2.13.0
 gunicorn
