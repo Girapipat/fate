@@ -17,4 +17,4 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-CMD ["gunicorn", "--bind", "0.0.0.0:$PORT", "app_ai:app"]
+ENTRYPOINT sh -c "gunicorn --bind 0.0.0.0:${PORT:-10000} app_ai:app"
