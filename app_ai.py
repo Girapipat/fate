@@ -1,17 +1,19 @@
 from flask import Flask, request, jsonify, render_template
 import numpy as np
-import tflite_runtime.interpreter as tflite
+import tensorflow as tf
 from PIL import Image
 import os
 
 app = Flask(__name__)
 
-interpreter = tflite.Interpreter(model_path="solution_model.tflite")
-interpreter.allocate_tensors()
+# โหลดโมเดล .h5
+model = tf.keras.models.load_model("solution_model.h5")
 
-input_details = interpreter.get_input_details()
-output_details = interpreter.get_output_details()
-input_shape = input_details[0]['shape'][1:3]
+# ขนาดภาพที่โมเดลต้องการ
+IMG_SIZE = (224, 224)
+
+# รายชื่อคลาส (ไม่จำเป็นต้องใช้ถ้าเป็น regression model)
+# CLASS_NAMES = [...]
 
 UPLOAD_FOLDER = 'static/uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -32,21 +34,20 @@ def upload():
     filepath = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(filepath)
 
-    # โหลดและเตรียมภาพ
+    # โหลดและแปลงภาพ
     img = Image.open(filepath).convert('RGB')
-    img = img.resize(input_shape)
+    img = img.resize(IMG_SIZE)
     img_array = np.array(img, dtype=np.float32) / 255.0
     img_array = np.expand_dims(img_array, axis=0)
 
-    # รันโมเดล
-    interpreter.set_tensor(input_details[0]['index'], img_array)
-    interpreter.invoke()
-    output_data = interpreter.get_tensor(output_details[0]['index'])
-
-    predicted_score = output_data[0][0]  # ผลลัพธ์ 0.0 - 0.9
+    # ทำนายด้วยโมเดล .h5
+    predicted_score = model.predict(img_array)[0][0]  # ค่าระหว่าง 0.0 - 0.9
     intensity = predicted_score * 255.0
 
-    if predicted_score < 0.05:
+    # ตัดสินใจว่าเป็นสารละลายหรือไม่
+    is_solution = predicted_score > 0.05  # สมมุติเกณฑ์ เช่น มากกว่า 0.05 ถือว่าเป็นสารละลาย
+
+    if not is_solution:
         return jsonify({'is_solution': False})
 
     return jsonify({
