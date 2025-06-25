@@ -1,6 +1,5 @@
 FROM python:3.10-slim
 
-# ติดตั้งไลบรารีที่จำเป็น
 RUN apt-get update && apt-get install -y \
     build-essential \
     python3-dev \
@@ -18,4 +17,4 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-CMD ["gunicorn", "--bind", "0.0.0.0:10000", "app_ai:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:$PORT", "app_ai:app"]
