@@ -1,10 +1,8 @@
-venv/
-venv310/
 __pycache__/
 *.pyc
+*.pyo
 *.pyd
-*.dll
-*.zip
-*.jpg
-*.png
-dataset/
+.env
+venv/
+uploads/
+static/uploads/

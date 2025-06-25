@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: ai-solution
+    env: docker
+    plan: free
+    dockerfilePath: Dockerfile
+    autoDeploy: true
+    healthCheckPath: /
+    envVars:
+      - key: PORT
+        value: 10000
