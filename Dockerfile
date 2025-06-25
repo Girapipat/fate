@@ -1,5 +1,6 @@
 FROM python:3.10-slim
 
+# ติดตั้ง lib ที่จำเป็น
 RUN apt-get update && apt-get install -y \
     build-essential \
     python3-dev \
@@ -11,10 +12,13 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-COPY requirements.txt requirements.txt
+COPY requirements.txt .
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
 COPY . .
 
-CMD ["gunicorn", "--bind", "0.0.0.0:$PORT", "app_ai:app"]
+# ให้ shell script มีสิทธิ์รัน
+RUN chmod +x entrypoint.sh
+
+CMD ["./entrypoint.sh"]
