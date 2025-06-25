@@ -7,7 +7,7 @@ import os
 app = Flask(__name__)
 
 # โหลดโมเดล .h5
-model = tf.keras.models.load_model("solution_model.h5")
+model = tf.keras.models.load_model("solution_model.h5", compile=False)
 
 # ขนาดภาพที่โมเดลต้องการ
 IMG_SIZE = (224, 224)
