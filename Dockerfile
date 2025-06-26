@@ -1,6 +1,5 @@
 FROM python:3.9-slim
 
-# ติดตั้ง lib ที่จำเป็น
 RUN apt-get update && apt-get install -y \
     build-essential \
     python3-dev \
@@ -18,7 +17,6 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-# ให้ shell script มีสิทธิ์รัน
 RUN chmod +x entrypoint.sh
 
 CMD ["./entrypoint.sh"]
